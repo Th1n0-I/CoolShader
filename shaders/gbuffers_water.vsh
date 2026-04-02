@@ -1,6 +1,11 @@
 #version 330 compatibility
 
 #include "lib/coordinateSpaceTransform.glsl"
+#include "lib/noise.glsl"
+
+#define Waves // Turn on water waves, can be turned off for better performance
+#define waveHeight 1 // [0.5 0.6 0.7 0.8 0.9 1 1.1 1.2 1.3 1.4 1.5 1.6 1.7 1.8 1.9 2 3 4 5 6 7 8 9 10 100] Change the height of the waves, WARNING: values above 1 can cause visual glitches, use with caution
+#define waveSpeed 1 // [0.5 0.6 0.7 0.8 0.9 1 1.1 1.2 1.3 1.4 1.5 1.6 1.7 1.8 1.9 2 3 4 5 6 7 8 9 10 100] Change the speed of the waves, use with caution as high values can cause visual glitches
 
 in vec2 mc_Entity;
 
@@ -8,22 +13,26 @@ in vec2 mc_Entity;
  out vec2 texcoord;
  out vec4 glcolor;
  out vec3 normal;
+ out vec3 worldPosition;
 
  uniform int worldTime;
 
 void main() {
 	vec4 clipPos = ftransform();
-	if (mc_Entity.y == 1.0){
-		vec3 worldPos = clipToWorld(ftransform());
-		worldPos.y += (sin(worldPos.x*0.1 + worldTime*0.06) + sin(worldPos.z*0.2 + worldTime*0.04))*0.02;
-		clipPos = worldToClip(worldPos);
-	}
-
+	vec3 worldPos;
+	#ifdef Waves
+		if(mc_Entity.y == 1.0){
+			worldPos = clipToWorld(clipPos);
+			worldPos.y += min(pNoise(worldPos.xz + vec2(worldTime*waveSpeed, worldTime*waveSpeed),1024),0.1);
+			clipPos = worldToClip(worldPos);
+		}
+	#endif
 	gl_Position = clipPos;
 
   	texcoord = (gl_TextureMatrix[0] * gl_MultiTexCoord0).xy;
   	lmcoord = (gl_TextureMatrix[1] * gl_MultiTexCoord1).xy;
   	glcolor = gl_Color;
+	worldPosition = worldPos;
 
   	normal = gl_NormalMatrix * gl_Normal;
    	normal = mat3(gbufferModelViewInverse) * normal;

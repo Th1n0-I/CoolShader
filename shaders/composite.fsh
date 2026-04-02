@@ -1,11 +1,16 @@
 #version 330 compatibility
 
 #include "/lib/shadowDistort.glsl"
+#include "/lib/coordinateSpaceTransform.glsl"
+
+//#define debugNormals  // For debugging: render normals instead of the final color
+//#define debugShadow  // For debugging: visualize shadow factor
 
 uniform sampler2D colortex0;
 uniform sampler2D colortex1;
 uniform sampler2D colortex2;
 uniform sampler2D depthtex0;
+uniform sampler2D colortex3;
 
 uniform sampler2D shadowtex0;
 uniform sampler2D shadowtex1;
@@ -14,10 +19,6 @@ uniform sampler2D shadowcolor0;
 // const int colortex0Format = RGB16;
 
 uniform vec3 shadowLightPosition;
-uniform mat4 gbufferModelViewInverse;
-uniform mat4 gbufferProjectionInverse;
-uniform mat4 shadowModelView;
-uniform mat4 shadowProjection;
 
 uniform int worldTime;
 uniform int blockEntityId;
@@ -87,11 +88,18 @@ void main() {
 		return;
 	}
 
-	vec3 ndcPos = vec3(texcoord.xy, depth) * 2.0 - 1.0; // normalized device coordinates (NDC); [-1.0, 1.0]
+	/*vec3 ndcPos = vec3(texcoord.xy, depth) * 2.0 - 1.0; // normalized device coordinates (NDC); [-1.0, 1.0]
  	vec3 viewPos = projectAndDivide(gbufferProjectionInverse, ndcPos); // position in view space
  	vec3 feetPlayerPos = (gbufferModelViewInverse * vec4(viewPos, 1.0)).xyz; // position relative to the feet of the player
  	vec3 shadowViewPos = (shadowModelView * vec4(feetPlayerPos, 1.0)).xyz;
  	vec4 shadowClipPos = shadowProjection * vec4(shadowViewPos, 1.0);
+	shadowClipPos.z -= 0.001;
+	shadowClipPos.xyz = distortShadowClipPos(shadowClipPos.xyz);
+ 	vec3 shadowNdcPos = shadowClipPos.xyz / shadowClipPos.w;
+ 	vec3 shadowScreenPos = shadowNdcPos * 0.5 + 0.5;
+	*/
+
+	vec4 shadowClipPos = worldToSCP(colortex3.xyz);
 	shadowClipPos.z -= 0.001;
 	shadowClipPos.xyz = distortShadowClipPos(shadowClipPos.xyz);
  	vec3 shadowNdcPos = shadowClipPos.xyz / shadowClipPos.w;
@@ -102,11 +110,14 @@ void main() {
 	vec3 blocklight = lightmap.x * blocklightColor;
 	vec3 skylight = lightmap.y * skylightColor;
 	vec3 ambient = ambientColor;
-	if(blockEntityId == 1) {
-		color.rgb = vec3(1.0);
-		return;
-	}
 	vec3 sunlight = getSunlightColor() * clamp(dot(worldLightVector, normal), 0.0, 1.0) * shadow;
 
 	color.rgb *= blocklight + skylight + ambient + sunlight;
+
+	#ifdef debugNormals
+	color.rgb = abs(normal);
+	#endif
+	#ifdef debugShadow
+	color.rgb = shadow;
+	#endif
 }

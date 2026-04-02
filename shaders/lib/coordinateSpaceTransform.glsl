@@ -4,6 +4,9 @@ uniform mat4 gbufferProjection;
 uniform mat4 gbufferModelViewInverse;
 uniform mat4 gbufferModelView;
 
+uniform mat4 shadowModelView;
+uniform mat4 shadowProjection;
+
 uniform vec3 cameraPosition;
 
 vec3 clipToWorld(vec4 clipPos){
@@ -18,4 +21,11 @@ vec4 worldToClip(vec3 worldPos){
     vec3 viewPos = (gbufferModelView * vec4(feetPlayerPos, 1.0)).xyz;
     vec4 clipPos = gbufferProjection * vec4(viewPos, 1.0);
     return clipPos;
+}
+
+vec4 worldToSCP(vec3 worldPos){
+    vec3 feetPlayerPos = worldPos - cameraPosition;
+    vec3 shadowViewPos = (shadowModelView * vec4(feetPlayerPos, 1.0)).xyz;
+    vec4 shadowClipPos = shadowProjection * vec4(shadowViewPos, 1.0);
+    return shadowClipPos;
 }
