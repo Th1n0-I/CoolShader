@@ -19,9 +19,13 @@ uniform mat4 gbufferProjectionInverse;
 uniform mat4 shadowModelView;
 uniform mat4 shadowProjection;
 
+uniform int worldTime;
+uniform int blockEntityId;
+
 const vec3 blocklightColor = vec3(1.0, 0.5, 0.08);
 const vec3 skylightColor = vec3(0.05, 0.15, 0.3);
-const vec3 sunlightColor = vec3(1.0);
+const vec3 sunlightColor = vec3(1.0, 0.95, 0.8);
+const vec3 moonlightColor = vec3(0.1, 0.12, 0.2);
 const vec3 ambientColor = vec3(0.1);
 
 in vec2 texcoord;
@@ -49,6 +53,23 @@ vec3 getShadow(vec3 shadowScreenPos){
    	vec4 shadowColor = texture(shadowcolor0, shadowScreenPos.xy);
 
    	return shadowColor.rgb * (1.0 - shadowColor.a);
+}
+
+vec3 getSunlightColor(){
+	int blendRange = 250;
+	int sunrise = 23725;
+	int sunset = 12785;
+	if (worldTime >= sunrise + blendRange || worldTime <= sunset - blendRange) {
+		return sunlightColor;
+	} else if (worldTime >= sunset + blendRange && worldTime <= sunrise - blendRange) {
+		return moonlightColor;
+	} else if (worldTime > sunrise - blendRange && worldTime < sunrise + blendRange) {
+		float t = float(worldTime - (sunrise - blendRange)) / float(2 * blendRange);
+		return mix(moonlightColor, sunlightColor, t);
+	} else if (worldTime > sunset - blendRange && worldTime < sunset + blendRange) {
+		float t = float(worldTime - (sunset - blendRange)) / float(2 * blendRange);
+		return mix(sunlightColor, moonlightColor, t);
+	}
 }
 
 void main() {
@@ -81,7 +102,11 @@ void main() {
 	vec3 blocklight = lightmap.x * blocklightColor;
 	vec3 skylight = lightmap.y * skylightColor;
 	vec3 ambient = ambientColor;
-	vec3 sunlight = sunlightColor * clamp(dot(worldLightVector, normal), 0.0, 1.0) * shadow;
+	if(blockEntityId == 1) {
+		color.rgb = vec3(1.0);
+		return;
+	}
+	vec3 sunlight = getSunlightColor() * clamp(dot(worldLightVector, normal), 0.0, 1.0) * shadow;
 
- 	color.rgb *= blocklight + skylight + ambient + sunlight;
+	color.rgb *= blocklight + skylight + ambient + sunlight;
 }

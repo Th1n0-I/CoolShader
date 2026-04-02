@@ -195,6 +195,10 @@ loom {
     }
 
     runs {
+        client {
+            vmArgs "-XshowSettings:all"
+        }
+
         shaderClient {
             inherit client
             configName = 'Shader Dev Client'
