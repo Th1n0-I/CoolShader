@@ -14,16 +14,14 @@ in vec2 mc_Entity;
  out vec2 texcoord;
  out vec4 glcolor;
  out vec3 normal;
- out vec3 worldPosition;
 
  uniform int worldTime;
 
 void main() {
 	vec4 clipPos = ftransform();
-	vec3 worldPos;
 	#ifdef Waves
 		if(mc_Entity.y == 1.0){
-			worldPos = clipToWorld(clipPos);
+			vec3 worldPos = clipToWorld(clipPos);
 			worldPos.y += min(pNoise(worldPos.xz * 100 + vec2(worldTime*waveSpeed, worldTime*waveSpeed),waveQuality)*waveHeight,0.1);
 			clipPos = worldToClip(worldPos);
 		}
@@ -33,7 +31,6 @@ void main() {
   	texcoord = (gl_TextureMatrix[0] * gl_MultiTexCoord0).xy;
   	lmcoord = (gl_TextureMatrix[1] * gl_MultiTexCoord1).xy;
   	glcolor = gl_Color;
-	worldPosition = worldPos;
 
   	normal = gl_NormalMatrix * gl_Normal;
    	normal = mat3(gbufferModelViewInverse) * normal;
