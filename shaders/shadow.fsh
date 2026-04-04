@@ -5,7 +5,7 @@ uniform sampler2D gtexture;
 in vec2 texcoord;
 in vec4 glcolor;
 
-const int shadowMapResolution = 2048; // [1024 2048 4096 8192 16384 32768]
+
 
 layout(location = 0) out vec4 color;
 
