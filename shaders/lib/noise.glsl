@@ -39,21 +39,8 @@ float pNoise(vec2 p, int res){
 }
 
 float NPNoise(vec2 p, int res){
-	float persistance = .5;
-	float n = 0.;
-	float normK = 0.;
-	float f = 4.;
-	float amp = 1.;
-	int iCount = 0;
-	for (int i = 0; i<50; i++){
-		n+=amp*noise(p, f);
-		f*=2.;
-		normK+=amp;
-		amp*=persistance;
-		if (iCount == res) break;
-		iCount++;
-	}
-	float nf = n/normK;
-	nf = (nf - 0.5) * 2;
-	return nf*nf* sign(nf);
+	float nf1, nf2;
+	nf1 = pNoise(p, res);
+	nf2 = pNoise(p + vec2(200.0), res);
+	return nf1 - nf2;
 }

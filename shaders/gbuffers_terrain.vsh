@@ -31,19 +31,17 @@ void main() {
   #ifdef wind
   if(mc_Entity.x == 10001 || (mc_Entity.x == 10002 && mc_midTexCoord.y > texcoord.y)|| (mc_Entity.x == 10003 && mc_midTexCoord.y < texcoord.y) || (mc_Entity.x == 10005 && mc_midTexCoord.y > texcoord.y)){
     vec3 worldPos = clipToWorld(clipPos);
-	  worldPos.x += NPNoise(worldPos.xy * 10 + vec2(worldTime * windSpeed, worldTime * windSpeed),512) * windStrength*0.5;
-    worldPos.z += NPNoise(worldPos.zy * 10 + vec2(worldTime * windSpeed, worldTime * windSpeed),512) * windStrength*0.5;
-    worldPos.y += NPNoise(worldPos.xz * 10 + vec2(worldTime * windSpeed, worldTime * windSpeed),512) * windStrength * 0.1;
+	  worldPos.x += NPNoise(worldPos.xy * 100 + vec2(worldTime * windSpeed, worldTime * windSpeed),512) * windStrength*0.5;
+    worldPos.z += NPNoise(worldPos.zy * 100 + vec2(worldTime * windSpeed, worldTime * windSpeed),512) * windStrength*0.5;
+    worldPos.y += NPNoise(worldPos.xz * 100 + vec2(worldTime * windSpeed, worldTime * windSpeed),512) * windStrength * 0.1;
     clipPos = worldToClip(worldPos);
   } else if ((mc_Entity.x == 10004 && mc_midTexCoord.y > texcoord.y) || (mc_Entity.x == 10005 && mc_midTexCoord.y < texcoord.y)){
     vec3 worldPos = clipToWorld(clipPos);
-	  worldPos.x += NPNoise(worldPos.xy * 10 + vec2(worldTime * windSpeed, worldTime * windSpeed),512) * windStrength*0.25;
-    worldPos.z += NPNoise(worldPos.zy * 10 + vec2(worldTime * windSpeed, worldTime * windSpeed),512) * windStrength*0.25;
-    worldPos.y += NPNoise(worldPos.xz * 10 + vec2(worldTime * windSpeed, worldTime * windSpeed),512) * windStrength * 0.05;
+	  worldPos.x += NPNoise(worldPos.xy * 100 + vec2(worldTime * windSpeed, worldTime * windSpeed),512) * windStrength*0.25;
+    worldPos.z += NPNoise(worldPos.zy * 100 + vec2(worldTime * windSpeed, worldTime * windSpeed),512) * windStrength*0.25;
+    worldPos.y += NPNoise(worldPos.xz * 100 + vec2(worldTime * windSpeed, worldTime * windSpeed),512) * windStrength * 0.05;
     clipPos = worldToClip(worldPos);
   }
   #endif
 	gl_Position = clipPos;
-
-  
 }
