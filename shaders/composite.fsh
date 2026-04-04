@@ -24,13 +24,14 @@ uniform sampler2D noisetex;
 
 uniform vec3 shadowLightPosition;
 
+
 uniform int worldTime;
 uniform int blockEntityId;
 
-uniform int viewWidth;
-uniform int viewHeight;
+uniform float viewWidth;
+uniform float viewHeight;
 
-const int noiseTextureResolution = 256;
+const int noiseTextureResolution =256;
 
 const vec3 blocklightColor = vec3(1.0, 0.5, 0.08);
 const vec3 skylightColor = vec3(0.05, 0.15, 0.3);
@@ -54,7 +55,7 @@ vec3 projectAndDivide(mat4 projectionMatrix, vec3 position){
 
 vec4 getNoise(vec2 coord){
 	ivec2 screenCoord = ivec2(coord * vec2(viewWidth, viewHeight));
-	ivec2 noiseCoord = screenCoord % 256;
+	ivec2 noiseCoord = screenCoord % noiseTextureResolution;
 	return texelFetch(noisetex, noiseCoord, 0);
 }
 
@@ -138,6 +139,11 @@ void main() {
 	vec3 ndcPos = vec3(texcoord.xy, depth) * 2.0 - 1.0; // normalized device coordinates (NDC); [-1.0, 1.0]
  	vec3 viewPos = projectAndDivide(gbufferProjectionInverse, ndcPos); // position in view space
  	vec3 feetPlayerPos = (gbufferModelViewInverse * vec4(viewPos, 1.0)).xyz; // position relative to the feet of the player
+	vec3 worldPos = feetPlayerPos + cameraPosition;
+	float a = radians(45);
+	mat2 rotation = mat2(cos(a), -sin(a), sin(a), cos(a));
+	worldPos.xz = rotation * worldPos.xz;
+	feetPlayerPos = worldPos - cameraPosition;
  	vec3 shadowViewPos = (shadowModelView * vec4(feetPlayerPos, 1.0)).xyz;
  	vec4 shadowClipPos = shadowProjection * vec4(shadowViewPos, 1.0);
 
