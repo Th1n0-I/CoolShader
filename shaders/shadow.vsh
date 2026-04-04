@@ -18,6 +18,8 @@ out vec2 texcoord;
 out vec4 glcolor;
 
 uniform int worldTime;
+uniform float sunAngle;
+
 in vec2 mc_Entity;
 in vec2 mc_midTexCoord;
 
@@ -26,9 +28,22 @@ in vec2 mc_midTexCoord;
 void main() {
   vec4 clipPos = ftransform();
   vec3 worldPos = shadowClipToWorld(clipPos);
-  float a = radians(45);
-  mat2 rotation = mat2(cos(a), -sin(a), sin(a), cos(a));
-  worldPos.xz = rotation * worldPos.xz;
+
+  float arcAmount;
+	if(worldTime >= 23725 || worldTime <= 12785) {
+    float sunTime = float(worldTime) - 23725.0;
+    if(sunTime < 0.0) sunTime += 24000.0;
+    	arcAmount = sin(sunTime / 13060.0 * 3.14159) * 0.5; // 0.5 = arc strength
+	} else {
+    	float moonTime = float(worldTime) - 12785.0;
+    	arcAmount = sin(moonTime / 10940.0 * 3.14159) * 0.5;
+	}
+	float len = length(worldPos);
+	vec3 dir = normalize(worldPos);
+	dir.z += arcAmount;
+	dir = normalize(dir);
+	worldPos = dir * len;
+
   texcoord = (gl_TextureMatrix[0] * gl_MultiTexCoord0).xy;
   glcolor = gl_Color;
   #ifdef wind

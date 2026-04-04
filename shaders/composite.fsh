@@ -30,6 +30,7 @@ uniform int blockEntityId;
 
 uniform float viewWidth;
 uniform float viewHeight;
+uniform float sunAngle;
 
 const int noiseTextureResolution =256;
 
@@ -40,8 +41,8 @@ const vec3 moonlightColor = vec3(0.1, 0.12, 0.2);
 const vec3 ambientColor = vec3(0.1);
 
 
-#define SHADOW_RADIUS 1
-#define SHADOW_RANGE 4
+#define SHADOW_RADIUS 2
+#define SHADOW_RANGE 6
 
 in vec2 texcoord;
 
@@ -140,9 +141,22 @@ void main() {
  	vec3 viewPos = projectAndDivide(gbufferProjectionInverse, ndcPos); // position in view space
  	vec3 feetPlayerPos = (gbufferModelViewInverse * vec4(viewPos, 1.0)).xyz; // position relative to the feet of the player
 	vec3 worldPos = feetPlayerPos + cameraPosition;
-	float a = radians(45);
-	mat2 rotation = mat2(cos(a), -sin(a), sin(a), cos(a));
-	worldPos.xz = rotation * worldPos.xz;
+
+	float arcAmount;
+	if(worldTime >= 23725 || worldTime <= 12785) {
+    float sunTime = float(worldTime) - 23725.0;
+    if(sunTime < 0.0) sunTime += 24000.0;
+    	arcAmount = sin(sunTime / 13060.0 * 3.14159) * 0.5; // 0.5 = arc strength
+	} else {
+    	float moonTime = float(worldTime) - 12785.0;
+    	arcAmount = sin(moonTime / 10940.0 * 3.14159) * 0.5;
+	}
+	float len = length(worldPos);
+	vec3 dir = normalize(worldPos);
+	dir.z += arcAmount;
+	dir = normalize(dir);
+	worldPos = dir * len;
+
 	feetPlayerPos = worldPos - cameraPosition;
  	vec3 shadowViewPos = (shadowModelView * vec4(feetPlayerPos, 1.0)).xyz;
  	vec4 shadowClipPos = shadowProjection * vec4(shadowViewPos, 1.0);
