@@ -38,3 +38,16 @@ vec4 worldToShadowClip(vec3 worldPos){
     vec4 shadowClipPos = shadowProjection * vec4(shadowViewPos, 1.0);
     return shadowClipPos;
 }
+
+float distance(vec3 modelPos, mat4 ModelViewMatrix){
+    vec3 viewPos = (ModelViewMatrix * vec4(modelPos, 1.0)).xyz;
+    vec3 feetPlayerPos = (gbufferModelViewInverse * vec4(viewPos, 1.0)).xyz;
+    float dist = length(feetPlayerPos);
+    return dist;
+}
+
+float shadowDistance(vec4 clipPos){
+    vec3 shadowViewPos = (shadowProjectionInverse * clipPos).xyz;
+    float dist = length(shadowViewPos);
+    return dist;
+}
