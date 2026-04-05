@@ -14,11 +14,14 @@ uniform sampler2D colortex1;
 uniform sampler2D colortex2;
 uniform sampler2D depthtex0;
 uniform sampler2D colortex3;
+uniform sampler2D colortex4;
 
 uniform sampler2D shadowtex0;
 uniform sampler2D shadowtex1;
 uniform sampler2D shadowcolor0;
 uniform sampler2D noisetex;
+
+uniform sampler2D normals;
 
 // const int colortex0Format = RGB16;
 
@@ -129,6 +132,21 @@ void main() {
 	vec3 lightVector = normalize(shadowLightPosition);
 	vec3 worldLightVector = mat3(gbufferModelViewInverse) * lightVector;
 
+	float arcAmount;
+	if(worldTime >= 23725 || worldTime <= 12785) {
+    float sunTime = float(worldTime) - 23725.0;
+    if(sunTime < 0.0) sunTime += 24000.0;
+    	arcAmount = sin(sunTime / 13060.0 * 3.14159) * 0.5; // 0.5 = arc strength
+	} else {
+    	float moonTime = float(worldTime) - 12785.0;
+    	arcAmount = sin(moonTime / 10940.0 * 3.14159) * 0.5;
+	}
+	float len = length(worldLightVector);
+	vec3 dir = normalize(worldLightVector);
+	dir.z += arcAmount;
+	dir = normalize(dir);
+	worldLightVector = dir * len;
+
 	color = texture(colortex0, texcoord);
 	color.rgb = pow(color.rgb, vec3(2.2));
 
@@ -142,7 +160,6 @@ void main() {
  	vec3 feetPlayerPos = (gbufferModelViewInverse * vec4(viewPos, 1.0)).xyz; // position relative to the feet of the player
 	vec3 worldPos = feetPlayerPos + cameraPosition;
 
-	float arcAmount;
 	if(worldTime >= 23725 || worldTime <= 12785) {
     float sunTime = float(worldTime) - 23725.0;
     if(sunTime < 0.0) sunTime += 24000.0;
@@ -151,8 +168,8 @@ void main() {
     	float moonTime = float(worldTime) - 12785.0;
     	arcAmount = sin(moonTime / 10940.0 * 3.14159) * 0.5;
 	}
-	float len = length(worldPos);
-	vec3 dir = normalize(worldPos);
+	len = length(worldPos);
+	dir = normalize(worldPos);
 	dir.z += arcAmount;
 	dir = normalize(dir);
 	worldPos = dir * len;

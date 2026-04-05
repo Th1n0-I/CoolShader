@@ -1,7 +1,7 @@
 #version 330 compatibility
 
 #include "lib/coordinateSpaceTransform.glsl"
-#include "lib/noise.glsl"
+#include "/lib/wavingBlocks.glsl"
 
 #define Waves // Turn on water waves, can be turned off for better performance
 #define waveHeight 1 // [0.5 0.6 0.7 0.8 0.9 1 1.1 1.2 1.3 1.4 1.5 1.6 1.7 1.8 1.9 2 3 4 5 6 7 8 9 10 100] Change the height of the waves, WARNING: values above 1 can cause visual glitches, use with caution
@@ -32,7 +32,7 @@ void main() {
 	#ifdef Waves
 		if(mc_Entity.y == 1.0){
 			vec3 worldPos = clipToWorld(clipPos);
-			worldPos.y += min(pNoise(worldPos.xz * 100 + vec2(worldTime*waveSpeed, worldTime*waveSpeed),waveQuality)*waveHeight,0.1);
+			worldPos.y = getWindOffset(worldPos, 50.0).y;
 			clipPos = worldToClip(worldPos);
 		}
 		gl_Position = clipPos;
