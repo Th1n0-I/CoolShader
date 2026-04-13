@@ -1,0 +1,96 @@
+//! Screen Space Reflections -- Followed tutorial: https://lettier.github.io/3d-game-shaders-for-beginners/screen-space-reflection.html
+
+#ifdef FRAGMENT_SHADER
+    float maxDistance = 15;
+    float resolution = 0.3;
+    float thickness = 0.5;
+    int steps = 10;
+
+    vec2 texSize = vec2(viewWidth, viewHeight);
+
+    vec4 startView = vec4(viewPos.xyz + (reflectedViewDir * 0), 1);
+    vec4 endView = vec4(viewPos.xyz + (reflectedViewDir * maxDistance), 1);
+    vec4 positionTo = vec4(viewPos, 1.0);
+
+    vec4 startFrag = startView;
+    startFrag.xyz = projectAndDivide(gbufferProjection, startFrag.xyz);
+    startFrag.xy = startFrag.xy * 0.5 + 0.5;
+    startFrag.xy *= texSize;
+
+    vec4 endFrag = endView;
+    endFrag.xyz = projectAndDivide(gbufferProjection, endFrag.xyz);
+    endFrag.xy = endFrag.xy * 0.5 + 0.5;
+    endFrag.xy *= texSize;
+
+    vec2 frag = startFrag.xy;
+    vec4 uv = vec4(0.0);
+    uv.xy = frag / texSize;
+
+    float deltaX = endFrag.x - startFrag.x;
+    float deltaY = endFrag.y - startFrag.y;
+
+    float useX = abs(deltaX) >= abs(deltaY) ? 1 : 0;
+    float delta = mix(abs(deltaY), abs(deltaX), useX) * clamp(resolution, 0, 1);
+
+    vec2 increment = vec2(deltaX, deltaY) / max(delta, 0.1);
+
+    float search0 = 0;
+    float search1 = 0;
+
+    int hit0 = 0;
+    int hit1 = 0;
+
+    float viewDistance = depth;
+    float screenDepth = thickness;
+
+    for(int i = 0; i < int(delta); ++i){
+        frag += increment;
+        uv.xy = frag / texSize;
+        positionTo = vec4(projectAndDivide(gbufferProjectionInverse, vec3(uv.xy, texture(depthtex0, uv.xy)) * 2.0 - 1.0), texture(depthtex0, uv.xy));
+
+        search1 = mix((frag.y - startFrag.y) / deltaY, (frag.x - startFrag.x) / deltaY, useX);
+
+        viewDistance = (startView.w * endView.w) / mix(endView.w, startView.w, search1);
+        screenDepth = texture(depthtex0, uv.xy).r;
+        float depthDifference = viewDistance - screenDepth;
+        if(depthDifference > 0 && depthDifference < thickness){
+            hit0 = 1;
+            break;
+        } else {
+            search0 = search1;
+        }
+    }
+
+    search1 = search0 + ((search1 - search0) / 2);
+
+    steps *= hit0;
+
+    for(int i = 0; i < steps; ++i){
+        frag = mix(startFrag.xy, endFrag.xy, search1);
+        uv.xy = frag / texSize;
+        positionTo = texture(colortex0, uv.xy);
+
+        viewDistance = (startView.w * endView.w) / mix(endView.w, startView.w, search1);
+        screenDepth = texture(depthtex0, uv.xy).r;
+        float depthDifference = viewDistance - screenDepth;
+
+        if(depthDifference > 0 && depthDifference < thickness){
+            hit1 = 1;
+            search1 = search0 + ((search1 - search0) / 2);
+        } else {
+            float temp = search1;
+            search1 = search1 + ((search1 - search0) / 2);
+            search0 = temp;
+        }
+    }
+
+    float visibility = hit1 * positionTo.w * (1 - max(dot(viewDir, reflectedViewDir), 0)) * (1 - clamp(screenDepth / thickness, 0, 1)) * (1 - clamp(length(positionTo.xyz - viewPos) / maxDistance, 0, 1)) * (uv.x < 0 || uv.x > 1 ? 0 : 1) * (uv.y < 0 || uv.y > 1 ? 0 : 1);
+
+    visibility = clamp(visibility, 0, 1);
+    uv.zw = vec2(visibility);
+
+    color = vec4(texture(colortex0, uv.xy).rgb, 1.0);
+    //color = vec4(reflectedViewDir * 0.5 + 0.5, 1.0);
+
+
+#endif

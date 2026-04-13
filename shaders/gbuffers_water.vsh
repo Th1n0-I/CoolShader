@@ -1,13 +1,10 @@
 #version 330 compatibility
 
-#include "lib/coordinateSpaceTransform.glsl"
-#include "/lib/wavingBlocks.glsl"
+#include "/lib/common.glsl"
 
-#define Waves // Turn on water waves, can be turned off for better performance
-#define waveHeight 1 // [0.5 0.6 0.7 0.8 0.9 1 1.1 1.2 1.3 1.4 1.5 1.6 1.7 1.8 1.9 2 3 4 5 6 7 8 9 10 100] Change the height of the waves, WARNING: values above 1 can cause visual glitches, use with caution
-#define waveSpeed 1 // [0.5 0.6 0.7 0.8 0.9 1 1.1 1.2 1.3 1.4 1.5 1.6 1.7 1.8 1.9 2 3 4 5 6 7 8 9 10 100] Change the speed of the waves, use with caution as high values can cause visual glitches
-#define waveQuality 1024 // [64 128 256 512 1024 2048 4096 8192]
-#define waveRenderDistance 8// [2 4 6 8 10 12 14 16 18 20 22 24 26 28 30 32]
+#include "lib/coordinateSpaceTransform.glsl"
+#include "/programs/wavingBlocks.glsl"
+
 
 in vec2 mc_Entity;
 
@@ -28,7 +25,7 @@ void main() {
 
   	normal = gl_NormalMatrix * gl_Normal;
    	normal = mat3(gbufferModelViewInverse) * normal;
-	if(distance(ftransform().xyz, gl_ModelViewMatrix) > waveRenderDistance * 16) return;
+	if(distance(clipPos.xyz, gl_ModelViewMatrix) > waveRenderDistance * 16) return;
 	#ifdef Waves
 		if(mc_Entity.y == 1.0){
 			vec3 worldPos = clipToWorld(clipPos);

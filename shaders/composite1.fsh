@@ -1,6 +1,9 @@
 #version 330 compatibility
 
+#include "/lib/common.glsl"
+
 uniform sampler2D colortex0;
+uniform sampler2D colortex4;
 uniform sampler2D depthtex0;
 uniform sampler2D normals;
 
@@ -8,17 +11,14 @@ uniform mat4 gbufferProjectionInverse;
 uniform vec3 fogColor;
 uniform float far;
 
+uniform float viewHeight;
+uniform float viewWidth;
+
 in vec2 texcoord;
 
-const int fogDensity = 5;
-
-vec3 projectAndDivide(mat4 projectionMatrix, vec3 position){
-  vec4 homPos = projectionMatrix * vec4(position, 1.0);
-  return homPos.xyz / homPos.w;
-}
-
-/* RENDERTARGETS: 0 */
+/* RENDERTARGETS: 0,4 */
 layout(location = 0) out vec4 color;
+layout(location = 1) out vec4 brightColor;
 
 void main() {
   color = texture(colortex0, texcoord);
@@ -27,12 +27,15 @@ void main() {
   if (depth == 1.0){
     return;
   }
+  #ifdef Fog
+    #include "/programs/Fog.glsl"
+  #endif
 
-  vec3 ndcPos = vec3(texcoord.xy, depth) * 2.0 - 1.0;
-  vec3 viewPos = projectAndDivide(gbufferProjectionInverse, ndcPos);
-
-  float dist = length(viewPos) / far;
-  float fogFactor = exp(-fogDensity * (1.0 - dist));
-
-  color.rgb = mix(color.rgb, pow(fogColor, vec3(2.2)), clamp(fogFactor, 0.0, 1.0));
+  #ifdef Bloom
+        bool horizontal = true;
+        #include "/programs/GaussianBlur.glsl"
+        brightColor = vec4(result, 1.0);
+    #else
+        brightColor = vec4(texture(colortex4, texcoord).rgb, 1.0);
+    #endif
 }

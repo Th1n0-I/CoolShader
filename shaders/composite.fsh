@@ -1,20 +1,19 @@
 #version 330 compatibility
 
+#include "/lib/common.glsl"
+
 #include "/lib/shadowDistort.glsl"
 #include "/lib/coordinateSpaceTransform.glsl"
 
-//#define debugNormals  // For debugging: render normals instead of the final color
-//#define debugShadow  // For debugging: visualize shadow factor
-//#define debugSunPos // For debugging: visualize sun position
-//#define debugShadowTex // For debugging: Visualize shadowTex
-//#define debugNoisetex // For debugging: Visualize noisetex
+#define FRAGMENT_SHADER
+
+
 
 uniform sampler2D colortex0;
 uniform sampler2D colortex1;
 uniform sampler2D colortex2;
 uniform sampler2D depthtex0;
 uniform sampler2D colortex3;
-uniform sampler2D colortex4;
 
 uniform sampler2D shadowtex0;
 uniform sampler2D shadowtex1;
@@ -23,7 +22,8 @@ uniform sampler2D noisetex;
 
 uniform sampler2D normals;
 
-// const int colortex0Format = RGB16;
+// const int colortex0Format = RGB16F;
+// const int colortex4Format = RGB16F;
 
 uniform vec3 shadowLightPosition;
 
@@ -35,11 +35,13 @@ uniform float viewWidth;
 uniform float viewHeight;
 uniform float sunAngle;
 
-const int noiseTextureResolution =256;
+uniform float far;
+
+const int noiseTextureResolution = 256;
 
 const vec3 blocklightColor = vec3(1.0, 0.5, 0.08);
 const vec3 skylightColor = vec3(0.05, 0.15, 0.3);
-const vec3 sunlightColor = vec3(1.0, 0.95, 0.8);
+const vec3 sunlightColor = vec3(4.0, 2.5, 0);
 const vec3 moonlightColor = vec3(0.1, 0.12, 0.2);
 const vec3 ambientColor = vec3(0.1);
 
@@ -49,13 +51,9 @@ const vec3 ambientColor = vec3(0.1);
 
 in vec2 texcoord;
 
-/* RENDERTARGETS: 0 */
+/* RENDERTARGETS: 0,4 */
 layout(location = 0) out vec4 color;
-
-vec3 projectAndDivide(mat4 projectionMatrix, vec3 position){
-	vec4 homPos = projectionMatrix * vec4(position, 1.0);
-	return homPos.xyz / homPos.w;
-}
+layout(location = 1) out vec4 brightColor;
 
 vec4 getNoise(vec2 coord){
 	ivec2 screenCoord = ivec2(coord * vec2(viewWidth, viewHeight));
@@ -126,40 +124,45 @@ vec3 getSunlightColor(){
 }
 
 void main() {
+	float depth = texture(depthtex0, texcoord).r;
+	vec3 ndcPos = vec3(texcoord.xy, depth) * 2.0 - 1.0;
+	vec3 viewPos = projectAndDivide(gbufferProjectionInverse, ndcPos);
+	vec3 viewDir = normalize(viewPos);
+	vec3 feetPlayerPos = (gbufferModelViewInverse * vec4(viewPos, 1.0)).xyz;
+	vec3 feetDir = normalize(feetPlayerPos);
+	vec3 worldPos = feetPlayerPos + cameraPosition;
+
 	vec2 lightmap = texture(colortex1, texcoord).xy;
    	vec3 encodedNormal = texture(colortex2, texcoord).rgb;
   	vec3 normal = normalize((encodedNormal - 0.5) * 2.0);
+	vec3 viewNormal = normalize(mat3(gbufferModelView) * normal);
 	vec3 lightVector = normalize(shadowLightPosition);
 	vec3 worldLightVector = mat3(gbufferModelViewInverse) * lightVector;
 
-	float arcAmount;
-	if(worldTime >= 23725 || worldTime <= 12785) {
-    float sunTime = float(worldTime) - 23725.0;
-    if(sunTime < 0.0) sunTime += 24000.0;
-    	arcAmount = sin(sunTime / 13060.0 * 3.14159) * 0.5; // 0.5 = arc strength
-	} else {
-    	float moonTime = float(worldTime) - 12785.0;
-    	arcAmount = sin(moonTime / 10940.0 * 3.14159) * 0.5;
-	}
-	float len = length(worldLightVector);
-	vec3 dir = normalize(worldLightVector);
-	dir.z += arcAmount;
-	dir = normalize(dir);
-	worldLightVector = dir * len;
+	vec3 reflectedViewDir = reflect(viewDir, viewNormal);
+	vec3 reflectedFeetDir = reflect(feetDir, normal);
 
 	color = texture(colortex0, texcoord);
 	color.rgb = pow(color.rgb, vec3(2.2));
 
-	float depth = texture(depthtex0, texcoord).r;
 	if(depth == 1.0) {
 		return;
 	}
 
-	vec3 ndcPos = vec3(texcoord.xy, depth) * 2.0 - 1.0; // normalized device coordinates (NDC); [-1.0, 1.0]
- 	vec3 viewPos = projectAndDivide(gbufferProjectionInverse, ndcPos); // position in view space
- 	vec3 feetPlayerPos = (gbufferModelViewInverse * vec4(viewPos, 1.0)).xyz; // position relative to the feet of the player
-	vec3 worldPos = feetPlayerPos + cameraPosition;
+	float arcAmount;
+	if(worldTime >= 23725 || worldTime <= 12785) {
+    	float sunTime = float(worldTime) - 23725.0;
+    if(sunTime < 0.0) sunTime += 24000.0;
+    	arcAmount = sin(sunTime / 13060.0 * 3.14159) * 0.5;
+	} else {
+    	float moonTime = float(worldTime) - 12785.0;
+    	arcAmount = sin(moonTime / 10940.0 * 3.14159) * 0.5;
+	}
+	vec3 dir = normalize(worldLightVector);
+	dir.z -= arcAmount;
+	worldLightVector = normalize(dir);
 
+	arcAmount;
 	if(worldTime >= 23725 || worldTime <= 12785) {
     float sunTime = float(worldTime) - 23725.0;
     if(sunTime < 0.0) sunTime += 24000.0;
@@ -168,40 +171,52 @@ void main() {
     	float moonTime = float(worldTime) - 12785.0;
     	arcAmount = sin(moonTime / 10940.0 * 3.14159) * 0.5;
 	}
-	len = length(worldPos);
+	float len = length(worldPos);
 	dir = normalize(worldPos);
 	dir.z += arcAmount;
 	dir = normalize(dir);
-	worldPos = dir * len;
+	vec3 sunWorldPos = dir * len;
 
-	feetPlayerPos = worldPos - cameraPosition;
- 	vec3 shadowViewPos = (shadowModelView * vec4(feetPlayerPos, 1.0)).xyz;
+	vec3 sunFeetPlayerPos = sunWorldPos - cameraPosition;
+ 	vec3 shadowViewPos = (shadowModelView * vec4(sunFeetPlayerPos, 1.0)).xyz;
  	vec4 shadowClipPos = shadowProjection * vec4(shadowViewPos, 1.0);
 
 	vec3 shadow = getSoftShadow(shadowClipPos);
+
 
 	vec3 blocklight = lightmap.x * blocklightColor;
 	vec3 skylight = lightmap.y * skylightColor;
 	vec3 ambient = ambientColor;
 	vec3 sunlight = getSunlightColor() * clamp(dot(worldLightVector, normal), 0.0, 1.0) * shadow;
-
 	color.rgb *= blocklight + skylight + ambient + sunlight;
+	#ifdef UseSpecularMaps
+		vec3 spec = texture(colortex3, texcoord).rgb;
+		float sunReflectionScore = pow(max(dot(reflectedFeetDir, worldLightVector),0), 20.0);
+		color.rgb += spec.r * getSunlightColor() * shadow * sunReflectionScore * 0.5;
+		#ifdef ScreenSpaceReflections
+			if(distance((gbufferProjection * vec4(viewPos.xyz, 1.0)).xyz, gl_ModelViewMatrix) < 16 && spec.g >= 1){
+				#include "/programs/SCSSR.glsl"
+			}
+		#endif
+	#endif
 
-	#ifdef debugNormals
-	color.rgb = abs(normal);
-	#endif
-	#ifdef debugShadow
-	color.rgb = shadow;
-	#endif
-	#ifdef debugSunPos
-	color.rgb = worldLightVector;
-	#endif
-	#ifdef debugShadowTex
-	color = vec4(texture(shadowtex0, texcoord).rgb, 1.0);
-	#endif
-	#ifdef debugNoisetex
-	ivec2 screenCoord = ivec2(texcoord * vec2(viewWidth, viewHeight	));
-	ivec2 noiseCoord = screenCoord % 256;
-	color = texelFetch(noisetex, noiseCoord, 0);
-	#endif
+
+
+	if (DebugMode == 1) color.rgb = viewNormal;
+	else if (DebugMode == 2) color.rgb = shadow;
+	else if (DebugMode == 3) {
+		#ifdef UseSpecularMaps
+			color.rgb = spec;
+		#endif
+	}
+	else if (DebugMode == 4) color.rgb = viewPos;
+	else if (DebugMode == 5) color.rgb = viewDir;
+	else if (DebugMode == 6) color.rgb = reflectedViewDir;
+	float brightness = dot(color.rgb, vec3(0.216, 0.715, 0.0722));
+	if (brightness > 1.0){
+		brightColor = vec4(color.rgb, 1.0);
+	} else {
+		brightColor = vec4(0);
+	}
+
 }

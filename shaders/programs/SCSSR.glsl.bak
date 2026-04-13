@@ -1,0 +1,47 @@
+//! Super Cool Screen Space Reflections
+
+#ifdef FRAGMENT_SHADER
+
+const float maxDistance = 10;
+const int stepSize = 20;
+
+vec4 reflectionColor = vec4(0.0);
+
+vec2 texSize = vec2(viewWidth, viewHeight);
+vec3 startFrag = vec3(texcoord * texSize, texture(depthtex0, texcoord).r);
+
+
+vec3 startViewPos = viewPos;
+vec3 endViewPos = (viewPos + reflectedViewDir) * maxDistance;
+
+vec3 endFrag = vec3((projectAndDivide(gbufferProjection, (endViewPos)) * 0.5 + 0.5).xy, 1.0);
+endFrag.z = texture(depthtex0, endFrag.xy).r;
+endFrag.xy *= texSize;
+vec3 delta;
+delta.x = endFrag.x - startFrag.x;
+delta.y = endFrag.y - startFrag.y;
+delta.z = endFrag.z - startFrag.z;
+float maxDelta = max(abs(delta.x), abs(delta.y));
+delta /= maxDelta;
+vec3 currentPos = startFrag;
+
+for(int i = 0; i < min(int(maxDelta), 100); i++){
+    currentPos += delta;
+    vec2 uv = currentPos.xy / texSize;
+    if (uv.x < 0.0 || uv.x > 1.0 || uv.y < 0.0 || uv.y > 1.0){
+        reflectionColor = vec4(1.0, 1.0, 1.0, 1.0);
+        break;
+    }
+
+    float rayDepth = texture(depthtex0, currentPos.xy / texSize).r;
+
+    if(currentPos.z > rayDepth)  {
+        reflectionColor = texture(colortex0, currentPos.xy / texSize);
+        break;
+    }
+
+}
+
+color = reflectionColor;
+//color = vec4((startFrag.xy + delta.xy*100) / texSize, 0.0, 1.0);
+#endif
